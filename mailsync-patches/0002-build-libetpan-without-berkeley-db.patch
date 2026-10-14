@@ -1,0 +1,13 @@
+diff --git a/build.sh b/build.sh
+index 6cbeb84..67a2bce 100755
+--- a/build.sh
++++ b/build.sh
+@@ -36,7 +36,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
+ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
+   echo "Building and installing libetpan..."
+   cd "$MAILSYNC_DIR/Vendor/libetpan"
+-  ./autogen.sh --with-openssl=/opt/openssl
++  ./autogen.sh --with-openssl=/opt/openssl --disable-db
+   make >/dev/null
+   sudo make install prefix=/usr >/dev/null
+ 
