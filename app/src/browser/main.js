@@ -42,12 +42,14 @@ if (typeof process.setFdLimit === 'function') {
 }
 
 const setupConfigDir = args => {
-  let dirname = 'Mailspring';
+  // CreateMail keeps its data apart from an installed copy of Mailspring, so the
+  // two apps never share (or migrate) one another's database and settings.
+  let dirname = 'CreateMail';
   if (args.devMode) {
-    dirname = 'Mailspring-dev';
+    dirname = 'CreateMail-dev';
   }
   if (args.specMode) {
-    dirname = 'Mailspring-spec';
+    dirname = 'CreateMail-spec';
   }
 
   // Check if a custom config dir was provided via --config-dir-path
@@ -293,7 +295,7 @@ const start = () => {
   // StatusNotifierItem ID on Linux, causing their tray visibility settings
   // to be synchronized. See: https://github.com/electron/electron/issues/40936
   if (process.platform === 'linux') {
-    app.setName('Mailspring');
+    app.setName('CreateMail');
   }
 
 

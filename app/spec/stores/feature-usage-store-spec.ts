@@ -4,128 +4,58 @@ import { IdentityStore } from '../../src/flux/stores/identity-store';
 
 describe('FeatureUsageStore', function featureUsageStoreSpec() {
   beforeEach(() => {
-    this.fakeIdentity = {
-      id: 'foo',
-      featureUsage: {
-        'is-usable': {
-          quota: 10,
-          period: 'monthly',
-          usedInPeriod: 8,
-          featureLimitName: 'Usable Group A',
-        },
-        'not-usable': {
-          quota: 10,
-          period: 'monthly',
-          usedInPeriod: 10,
-          featureLimitName: 'Unusable Group A',
-        },
-      },
-    };
-    spyOn(IdentityStore, 'identity').andReturn(this.fakeIdentity);
-    spyOn(IdentityStore, 'saveIdentity').andCallFake(async (ident) => {
-      this.fakeIdentity = ident;
-    });
+    spyOn(Actions, 'queueTask');
+    spyOn(Actions, 'openModal');
   });
 
-  describe('isUsable', () => {
-    it("returns true if a feature hasn't met it's quota", () => {
-      expect(FeatureUsageStore.isUsable('is-usable')).toBe(true);
-    });
-
-    it('returns false if a feature is at its quota', () => {
-      expect(FeatureUsageStore.isUsable('not-usable')).toBe(false);
-    });
-
-    it('returns true if no quota is present for the feature', () => {
-      spyOn(console, 'warn');
-      expect(FeatureUsageStore.isUsable('unsupported')).toBe(true);
-      expect(console.warn).toHaveBeenCalled();
-    });
+  afterEach(() => {
+    TaskQueue._queue = [];
   });
 
-  describe('markUsed', () => {
+  describe('without a Mailspring ID', () => {
     beforeEach(() => {
-      spyOn(Actions, 'queueTask');
+      spyOn(IdentityStore, 'identity').andReturn(null);
     });
 
-    afterEach(() => {
-      TaskQueue._queue = [];
+    it('reports every feature as usable', () => {
+      expect(FeatureUsageStore.isUsable('snooze')).toBe(true);
+      expect(FeatureUsageStore.isUsable('send-later')).toBe(true);
+      expect(FeatureUsageStore.isUsable('unknown-feature')).toBe(true);
     });
 
-    it('immediately increments the identity counter', () => {
-      const before = this.fakeIdentity.featureUsage['is-usable'].usedInPeriod;
-      FeatureUsageStore.markUsed('is-usable');
-      const after = this.fakeIdentity.featureUsage['is-usable'].usedInPeriod;
-      expect(after).toEqual(before + 1);
+    it('reports Pro features as available', () => {
+      expect(IdentityStore.hasProFeatures()).toBe(true);
     });
 
-    it('queues a task to sync the optimistic changes to the server', () => {
-      FeatureUsageStore.markUsed('is-usable');
+    it('resolves markUsedOrUpgrade without showing an upgrade modal', async () => {
+      await FeatureUsageStore.markUsedOrUpgrade('snooze', {} as any);
+      expect(Actions.openModal).not.toHaveBeenCalled();
+    });
+
+    it('resolves displayUpgradeModal without showing a modal', async () => {
+      await FeatureUsageStore.displayUpgradeModal('translation', {} as any);
+      expect(Actions.openModal).not.toHaveBeenCalled();
+    });
+
+    it('does not queue usage events', () => {
+      FeatureUsageStore.markUsed('snooze');
+      expect(Actions.queueTask).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('with a Mailspring ID', () => {
+    beforeEach(() => {
+      spyOn(IdentityStore, 'identity').andReturn({ id: 'foo', featureUsage: {} } as any);
+    });
+
+    it('queues a usage event for client-recorded features', () => {
+      FeatureUsageStore.markUsed('snooze');
       expect(Actions.queueTask).toHaveBeenCalled();
     });
-  });
 
-  describe('markUsedOrUpgrade', () => {
-    beforeEach(() => {
-      spyOn(FeatureUsageStore, 'markUsed').andReturn(Promise.resolve());
-      spyOn(Actions, 'openModal');
-    });
-
-    it("marks the feature used if it's usable", async () => {
-      await FeatureUsageStore.markUsedOrUpgrade('is-usable', {} as any);
-      expect(FeatureUsageStore.markUsed).toHaveBeenCalled();
-      expect((FeatureUsageStore.markUsed as jasmine.Spy).callCount).toBe(1);
-    });
-
-    describe('showing modal', () => {
-      beforeEach(() => {
-        this.lexicon = {
-          headerText: 'all test used',
-          rechargeText: 'add a test to',
-          iconUrl: 'icon url',
-        };
-      });
-
-      it('resolves the modal if you upgrade', async () => {
-        setImmediate(() => {
-          this.fakeIdentity.featureUsage['not-usable'].quota = 10000;
-          FeatureUsageStore._onModalClose();
-        });
-        await FeatureUsageStore.markUsedOrUpgrade('not-usable', this.lexicon);
-        expect(Actions.openModal).toHaveBeenCalled();
-        expect((Actions.openModal as unknown as jasmine.Spy).calls.length).toBe(1);
-      });
-
-      it('pops open a modal with the correct text', async () => {
-        setImmediate(() => {
-          this.fakeIdentity.featureUsage['not-usable'].quota = 10000;
-          FeatureUsageStore._onModalClose();
-        });
-        await FeatureUsageStore.markUsedOrUpgrade('not-usable', this.lexicon);
-        expect(Actions.openModal).toHaveBeenCalled();
-        expect((Actions.openModal as unknown as jasmine.Spy).calls.length).toBe(1);
-        const component = (Actions.openModal as unknown as jasmine.Spy).calls[0].args[0].component;
-        expect(component.props).toEqual({
-          modalClass: 'not-usable',
-          headerText: 'all test used',
-          iconUrl: 'icon url',
-          rechargeText: 'add a test to',
-        });
-      });
-
-      it("rejects if you don't upgrade", async () => {
-        let caughtError = false;
-        setImmediate(() => {
-          FeatureUsageStore._onModalClose();
-        });
-        try {
-          await FeatureUsageStore.markUsedOrUpgrade('not-usable', this.lexicon);
-        } catch (err) {
-          expect(err instanceof FeatureUsageStore.NoProAccessError).toBe(true);
-          caughtError = true;
-        }
-        expect(caughtError).toBe(true);
-      });
+    it('does not queue usage events for server-recorded features', () => {
+      FeatureUsageStore.markUsed('translation');
+      expect(Actions.queueTask).not.toHaveBeenCalled();
     });
   });
 });

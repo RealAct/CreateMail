@@ -1,83 +1,87 @@
 name: Build for macOS
 
+# Produces CreateMail.app for Apple Silicon and Intel Macs as downloadable
+# workflow artifacts. Run it from the Actions tab ("Run workflow"), or push a
+# tag like v1.0.0 to also attach the zips to a GitHub release.
+#
+# Builds are ad-hoc signed. To sign and notarize with your own Apple
+# Developer ID, add the APPLE_* secrets and set SIGN_BUILD=true below.
+
 on:
   workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
 
 jobs:
   build-macos:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-26
             arch: arm64
+            label: AppleSilicon
           - os: macos-26-intel
             arch: x64
+            label: Intel
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Fail if branch is not main
-        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master'
-        run: |
-          echo "This workflow should not be triggered with workflow_dispatch on a branch other than main"
-          exit 1
-
       - name: Checkout Repo
         uses: actions/checkout@v7
 
-      - name: Cache NodeJS modules
-        uses: actions/cache@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
         with:
-          path: |
-            ./node_modules
-            ./app/node_modules
-          key: ${{ matrix.os }}-${{ runner.arch }}-deps-${{ hashFiles('yarn.lock') }}-${{ hashFiles('app/package-lock.json') }}
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
 
-      - name: Setup Codesigning
-        uses: apple-actions/import-codesign-certs@v7
-        with:
-          p12-file-base64: ${{ secrets.APPLE_CODESIGN_P12 }}
-          p12-password: ${{ secrets.APPLE_CODESIGN_KEY_PASSWORD }}
-
-      - name: Setup Provisioning Profile
-        run: |
-          echo "APPLE_PROVISIONING_PROFILE_PATH=${{ runner.temp }}/Mailspring.provisionprofile" >> $GITHUB_ENV
-          echo $APPLE_PROVISIONING_PROFILE_B64 | base64 --decode > "${{ runner.temp }}/Mailspring.provisionprofile"
-        env:
-          APPLE_PROVISIONING_PROFILE_B64: ${{ secrets.APPLE_PROVISIONING_PROFILE_B64 }}
-
-      - name: Setup AWS CLI
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
       - name: Lint
         run: npm run lint:check
 
-      - name: Build
-        run: SIGN_BUILD=true DEBUG=electron-packager,electron-osx-sign,electron-notarize* npm run build
+      # Gmail and Outlook / Hotmail / Office 365 sign-in need OAuth clients that
+      # belong to this app. Add them as repository secrets (docs/oauth-setup.md);
+      # without them those providers show setup instructions instead.
+      - name: Write OAuth credentials
         env:
-          APPLE_ID_ASC_PROVIDER: ${{ secrets.APPLE_ID_ASC_PROVIDER }}
-          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-          APPLE_PROVISIONING_PROFILE_PATH: ${{ env.APPLE_PROVISIONING_PROFILE_PATH }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-
-      - name: Rename artifacts
-        if: matrix.arch == 'arm64'
+          GMAIL_CLIENT_ID: ${{ secrets.CREATEMAIL_GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET: ${{ secrets.CREATEMAIL_GMAIL_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.CREATEMAIL_MICROSOFT_CLIENT_ID }}
         run: |
-          mv app/dist/Mailspring.zip app/dist/Mailspring-AppleSilicon.zip
+          node -e '
+            const creds = {
+              gmailClientId: process.env.GMAIL_CLIENT_ID || undefined,
+              gmailClientSecret: process.env.GMAIL_CLIENT_SECRET || undefined,
+              microsoftClientId: process.env.MICROSOFT_CLIENT_ID || undefined,
+            };
+            require("fs").writeFileSync("app/oauth-credentials.json", JSON.stringify(creds));
+            console.log("Gmail OAuth:", !!creds.gmailClientId, "Microsoft OAuth:", !!creds.microsoftClientId);
+          '
 
-      - name: Sync artifacts to S3 bucket
-        run: |
-          aws s3 sync app/dist/ "s3://mailspring-builds/client/$(git rev-parse --short=8 HEAD)/osx" \
-            --acl public-read \
-            --exclude "*" --include *.zip
+      - name: Build mailsync
+        run: npm run build-mailsync
+
+      - name: Build
+        run: npm run build
+
+      - name: Rename artifact
+        run: mv app/dist/CreateMail.zip "app/dist/CreateMail-${{ matrix.label }}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: CreateMail-${{ matrix.label }}
+          path: app/dist/CreateMail-${{ matrix.label }}.zip
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: app/dist/CreateMail-${{ matrix.label }}.zip
