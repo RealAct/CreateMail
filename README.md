@@ -106,13 +106,14 @@ Requires Node.js 20+ and the Xcode command line tools.
 
 ```
 npm install
+npm run build-mailsync
 npm run build
 ```
 
 The app is written to `app/dist/CreateMail-darwin-<arch>/CreateMail.app` and
 zipped to `app/dist/CreateMail.zip`.
 
-To run from source instead: `npm install && npm start`.
+To run from source instead: `npm install && npm run build-mailsync && npm start`.
 
 ## Development
 
@@ -121,8 +122,11 @@ Everything in upstream Mailspring's docs still applies: see
 [PLUGIN_SYSTEM_ARCHITECTURE.md](PLUGIN_SYSTEM_ARCHITECTURE.md).
 
 The sync engine is the `mailsync` submodule, pinned to upstream
-Mailspring-Sync. `npm install` downloads the prebuilt binary for that commit,
-so you do not need to compile it.
+[Mailspring-Sync](https://github.com/Foundry376/Mailspring-Sync) (GPLv3).
+Mailspring's prebuilt sync engine only runs from an app whose path contains
+"mailspring", so CreateMail builds it from source:
+`npm run build-mailsync` checks out the submodule, applies the patches in
+[mailsync-patches/](mailsync-patches) and installs the result into `app/`.
 
 The repository's first commit is the unmodified upstream import, so
 `git diff <first commit>` shows every change CreateMail makes to Mailspring.

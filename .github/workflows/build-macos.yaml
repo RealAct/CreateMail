@@ -65,6 +65,9 @@ jobs:
             console.log("Gmail OAuth:", !!creds.gmailClientId, "Microsoft OAuth:", !!creds.microsoftClientId);
           '
 
+      - name: Build mailsync
+        run: npm run build-mailsync
+
       - name: Build
         run: npm run build
 
