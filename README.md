@@ -29,6 +29,32 @@ its authors at [getmailspring.com/pro](https://getmailspring.com/pro).
 - **No calls home.** Auto-update (which would replace this app with official
   Mailspring), Sentry error reporting and crash-report uploads are turned off.
 
+## Mail services and protocols
+
+CreateMail uses Mailspring's sync engine, which speaks **IMAP** (with IDLE,
+CONDSTORE/QRESYNC and Gmail's labels extension) and **SMTP** for mail,
+**CalDAV** for calendars and **CardDAV** / Google People / Microsoft Graph
+for contacts, over TLS or STARTTLS, with **OAuth 2.0 (XOAUTH2)** or password
+sign-in.
+
+| Service | Sign-in |
+| --- | --- |
+| Gmail and Google Workspace | OAuth (needs a Google client, see below) or IMAP app password |
+| Outlook.com, Hotmail, Live, MSN | OAuth (needs a Microsoft client, see below) |
+| Office 365 / Microsoft 365, including shared mailboxes | OAuth (needs a Microsoft client) |
+| iCloud, Yahoo, AOL | IMAP with an app password |
+| Fastmail, GMX, Yandex, Zoho, Proton (via Proton Mail Bridge) | IMAP |
+| Any other IMAP/SMTP server | IMAP, with automatic server settings for 1,000+ domains |
+
+Gmail and Microsoft sign-in need OAuth clients registered for this app;
+Mailspring asks forks not to reuse its own. Setting them up is free and takes
+about ten minutes: see [docs/oauth-setup.md](docs/oauth-setup.md). Until then
+those sign-in pages explain what to do, and Gmail offers IMAP with an app
+password instead.
+
+Not supported by the sync engine: POP3, Exchange ActiveSync / EWS (on-premises
+Exchange without IMAP) and JMAP.
+
 ## Pro feature status
 
 | Pro feature | Status |
@@ -44,6 +70,7 @@ its authors at [getmailspring.com/pro](https://getmailspring.com/pro).
 | Grammar check | 🚧 Phase 2: pluggable grammar provider |
 | Thread sharing | 🚧 Phase 2: share as a self-contained HTML file |
 | Read receipts | 🚧 Phase 3: self-hostable tracking server |
+| Mail merge | 🚧 Phase 2: rebuilt (Mailspring's plugin is closed source) |
 | Link tracking | 🚧 Phase 3: self-hostable tracking server |
 
 Features marked 🚧 depend on Mailspring's hosted services, so they are hidden

@@ -80,3 +80,5 @@ client_secret.json
 /test-results
 /playwright-report
 /playwright/test-results/
+##### CreateMail OAuth credentials (written at build time, see docs/oauth-setup.md)
+app/oauth-credentials.json

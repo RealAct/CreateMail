@@ -1,31 +1,57 @@
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
 export const LOCAL_SERVER_PORT = 12141;
 
-export const GMAIL_CLIENT_ID =
-  process.env.MS_GMAIL_CLIENT_ID ||
-  '662287800555-pdiq3r3puob8a44locitndbocua7c30f.apps.googleusercontent.com';
+/**
+ * OAuth credentials for Gmail and Microsoft (Outlook.com / Hotmail / Office 365).
+ *
+ * Upstream Mailspring embeds its own Google and Microsoft OAuth clients and asks
+ * derivative works not to reuse them, so CreateMail ships without any. They are
+ * read, in order, from:
+ *
+ *   1. environment variables (CREATEMAIL_GMAIL_CLIENT_ID, CREATEMAIL_GMAIL_CLIENT_SECRET,
+ *      CREATEMAIL_MICROSOFT_CLIENT_ID; the upstream MS_* names also work), or
+ *   2. app/oauth-credentials.json, written at build time (see docs/oauth-setup.md).
+ *
+ * When a provider has no credentials, its sign-in page explains how to add them
+ * and, for Gmail, offers IMAP with an app password instead.
+ */
+interface OAuthCredentialsFile {
+  gmailClientId?: string;
+  gmailClientSecret?: string;
+  microsoftClientId?: string;
+}
 
-// per https://stackoverflow.com/questions/59416326/safely-distribute-oauth-2-0-client-secret-in-desktop-applications-in-python,
-// we really do need to embed this in the application and it's more an extension of the Client ID than a proper Client Secret.
-//
-// We could run a small web app that receives the code and exchanges it for the refresh token (storing this on the server), but
-// that web flow would still hand the resulting client secret to the desktop app, whose authenticity it can't verify.
-// (It can verify the connection is secure, but not that the receiving party is /this/ copy of Mailspring.)
-//
-// Note: This is not a security risk for the end-user -- it just means someone could "fork" Mailspring and re-use it's
-// Client ID and Secret. For now, it seems we're on the honor code - Please don't do this.
-//
+function loadOAuthCredentialsFile(): OAuthCredentialsFile {
+  try {
+    const file = path.join(__dirname, '..', '..', '..', 'oauth-credentials.json');
+    if (!fs.existsSync(file)) return {};
+    return JSON.parse(fs.readFileSync(file, 'utf8')) || {};
+  } catch (err) {
+    console.warn('Could not read oauth-credentials.json', err);
+    return {};
+  }
+}
+
+const OAuthCredentialsFromFile = loadOAuthCredentialsFile();
+
+export const GMAIL_CLIENT_ID =
+  process.env.CREATEMAIL_GMAIL_CLIENT_ID ||
+  process.env.MS_GMAIL_CLIENT_ID ||
+  OAuthCredentialsFromFile.gmailClientId ||
+  '';
+
+// Google issues "Desktop app" clients a secret that cannot be kept confidential in
+// a desktop app and treats it as part of the client ID; it still has to be sent.
 export const GMAIL_CLIENT_SECRET =
+  process.env.CREATEMAIL_GMAIL_CLIENT_SECRET ||
   process.env.MS_GMAIL_CLIENT_SECRET ||
-  crypto
-    .createDecipheriv(
-      'aes-256-ctr',
-      "don't-be-ev1l-thanks--mailspring",
-      Buffer.from('wgvAx+N05nHqhFxJ9I07jw==', 'base64')
-    )
-    .update(Buffer.from('1EyEGYVh3NBNIbYEdpdMvOzCH7+vrSciGeYZ1F+W6W+yShk=', 'base64'))
-    .toString('utf8');
+  OAuthCredentialsFromFile.gmailClientSecret ||
+  '';
+
+export const GMAIL_OAUTH_CONFIGURED = !!(GMAIL_CLIENT_ID && GMAIL_CLIENT_SECRET);
 
 export const GMAIL_SCOPES = [
   'https://mail.google.com/', // email
@@ -36,7 +62,12 @@ export const GMAIL_SCOPES = [
 ];
 
 export const O365_CLIENT_ID =
-  process.env.MS_O365_CLIENT_ID || '8787a430-6eee-41e1-b914-681d90d35625';
+  process.env.CREATEMAIL_MICROSOFT_CLIENT_ID ||
+  process.env.MS_O365_CLIENT_ID ||
+  OAuthCredentialsFromFile.microsoftClientId ||
+  '';
+
+export const MICROSOFT_OAUTH_CONFIGURED = !!O365_CLIENT_ID;
 
 export const O365_SCOPES = [
   'openid', // required for id_token to be returned

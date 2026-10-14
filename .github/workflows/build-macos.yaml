@@ -46,6 +46,25 @@ jobs:
       - name: Lint
         run: npm run lint:check
 
+      # Gmail and Outlook / Hotmail / Office 365 sign-in need OAuth clients that
+      # belong to this app. Add them as repository secrets (docs/oauth-setup.md);
+      # without them those providers show setup instructions instead.
+      - name: Write OAuth credentials
+        env:
+          GMAIL_CLIENT_ID: ${{ secrets.CREATEMAIL_GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET: ${{ secrets.CREATEMAIL_GMAIL_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.CREATEMAIL_MICROSOFT_CLIENT_ID }}
+        run: |
+          node -e '
+            const creds = {
+              gmailClientId: process.env.GMAIL_CLIENT_ID || undefined,
+              gmailClientSecret: process.env.GMAIL_CLIENT_SECRET || undefined,
+              microsoftClientId: process.env.MICROSOFT_CLIENT_ID || undefined,
+            };
+            require("fs").writeFileSync("app/oauth-credentials.json", JSON.stringify(creds));
+            console.log("Gmail OAuth:", !!creds.gmailClientId, "Microsoft OAuth:", !!creds.microsoftClientId);
+          '
+
       - name: Build
         run: npm run build
 
