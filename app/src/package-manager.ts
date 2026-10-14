@@ -4,6 +4,16 @@ import { shell } from 'electron';
 import { localized } from './intl';
 import Package, { isValidPackageName } from './package';
 
+// Pro packages whose features depend on Mailspring's hosted services
+// (tracking pixels, translation, contact enrichment, shared-thread hosting).
+const PACKAGES_REQUIRING_HOSTED_SERVICES = [
+  'open-tracking',
+  'link-tracking',
+  'translation',
+  'participant-profile',
+  'thread-sharing',
+];
+
 export default class PackageManager {
   packageDirectories: string[] = [];
   waiting: Package[] = [];
@@ -130,7 +140,16 @@ export default class PackageManager {
       return;
     }
 
-    if (pkg.isIdentityRequired() && !this.identityPresent) {
+    // CreateMail: packages marked `isIdentityRequired` used to load only for
+    // signed-in Mailspring IDs. Pro features that run locally (snooze,
+    // reminders, activity...) now always load. Those that still call
+    // Mailspring's hosted services stay off without an ID until CreateMail
+    // provides its own backend for them, so they never fail half-way.
+    if (
+      pkg.isIdentityRequired() &&
+      !this.identityPresent &&
+      PACKAGES_REQUIRING_HOSTED_SERVICES.includes(pkg.name)
+    ) {
       return;
     }
 

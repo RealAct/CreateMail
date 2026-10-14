@@ -213,7 +213,7 @@ function buildPackagerOptions() {
       win32: path.resolve(appDir, 'build', 'resources', 'win', 'mailspring-square.ico'),
       linux: undefined,
     }[platform],
-    name: { darwin: 'Mailspring', win32: 'Mailspring', linux: 'mailspring' }[platform],
+    name: { darwin: 'CreateMail', win32: 'CreateMail', linux: 'createmail' }[platform],
     appCopyright: `Copyright (C) 2014-${new Date().getFullYear()} Foundry 376, LLC. All rights reserved.`,
     derefSymlinks: false,
     asar: {
@@ -300,7 +300,7 @@ function buildPackagerOptions() {
             // cannot match to a profile scoped to that binary.
             // Note: electron-osx-sign passes the .app bundle path (not the
             // inner executable path) when signing the top-level app bundle.
-            const isMainExecutable = filePath.endsWith('/Mailspring.app');
+            const isMainExecutable = filePath.endsWith('/CreateMail.app');
             return {
               hardenedRuntime: true,
               entitlements: path.resolve(
@@ -337,7 +337,9 @@ function buildPackagerOptions() {
       platform === 'darwin'
         ? [path.resolve(appDir, 'build', 'resources', 'mac', 'new-mail.mp3')]
         : undefined,
-    appBundleId: 'com.mailspring.mailspring',
+    // A bundle ID distinct from Mailspring's lets CreateMail.app live next to
+    // Mailspring.app without sharing its preferences, keychain items or caches.
+    appBundleId: 'io.github.realact.createmail',
     afterCopy: [
       runCopyPlatformSpecificResources,
       runWriteCommitHashIntoPackage,
@@ -371,15 +373,28 @@ async function runPackager() {
 }
 
 async function createMacZip() {
-  const zipPath = path.join(outputDir, 'Mailspring.zip');
+  const zipPath = path.join(outputDir, 'CreateMail.zip');
   if (fs.existsSync(zipPath)) {
     fs.unlinkSync(zipPath);
   }
   const arch = process.env.OVERRIDE_TO_INTEL ? 'x64' : process.arch;
-  const cwd = path.join(outputDir, `Mailspring-darwin-${arch}`);
+  const cwd = path.join(outputDir, `CreateMail-darwin-${arch}`);
+
+  // Without a Developer ID (SIGN_BUILD unset), packaging leaves Electron's
+  // original signature invalid, and Apple Silicon refuses to launch binaries
+  // with a broken signature. An ad-hoc signature makes the bundle launchable.
+  if (!process.env.SIGN_BUILD) {
+    await spawn({
+      cmd: 'codesign',
+      args: ['--force', '--deep', '--sign', '-', 'CreateMail.app'],
+      opts: { cwd },
+    });
+    console.log('>> Ad-hoc signed CreateMail.app');
+  }
+
   await spawn({
     cmd: 'zip',
-    args: ['-9', '-y', '-r', '-9', '-X', zipPath, 'Mailspring.app'],
+    args: ['-9', '-y', '-r', '-9', '-X', zipPath, 'CreateMail.app'],
     opts: { cwd },
   });
   console.log(`>> Created ${zipPath}`);

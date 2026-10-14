@@ -83,8 +83,13 @@ class _IdentityStore extends MailspringStore {
     return this._identity.id;
   }
 
+  /**
+   * CreateMail ships every Mailspring Pro feature unlocked. Pro access is no
+   * longer tied to a paid Mailspring ID, so this is true whether or not an
+   * identity is signed in.
+   */
   hasProFeatures() {
-    return this._identity && this._identity.stripePlanEffective !== 'Basic';
+    return true;
   }
 
   _fetchAndPollRemoteIdentity() {

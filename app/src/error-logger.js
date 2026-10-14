@@ -9,7 +9,6 @@ if (process.type === 'renderer') {
 }
 
 var appVersion = app.getVersion();
-var SentryErrorReporter = require('./error-logger-extensions/sentry-error-reporter');
 
 // A globally available ErrorLogger that can report errors to various
 // sources and enhance error functionality.
@@ -39,13 +38,10 @@ module.exports = ErrorLogger = (function () {
 
     this._extendNativeConsole();
 
-    this.extensions = [
-      new SentryErrorReporter({
-        inSpecMode: args.inSpecMode,
-        inDevMode: args.inDevMode,
-        resourcePath: args.resourcePath,
-      }),
-    ];
+    // CreateMail: errors are not sent to Mailspring's Sentry project. Reports
+    // from this fork would be noise to the upstream team, so the reporter is
+    // only kept around for anyone who wires up their own DSN.
+    this.extensions = [];
 
     if (this.inSpecMode) {
       return;
@@ -160,11 +156,11 @@ module.exports = ErrorLogger = (function () {
       return;
     }
     require('electron').crashReporter.start({
-      productName: 'Mailspring',
-      companyName: 'Mailspring',
-      submitURL: `https://id.getmailspring.com/report-crash?ver=${appVersion}&platform=${process.platform}`,
-      uploadToServer: true,
-      autoSubmit: true,
+      productName: 'CreateMail',
+      companyName: 'CreateMail',
+      submitURL: '',
+      uploadToServer: false,
+      autoSubmit: false,
       extra: {
         ver: appVersion,
         platform: process.platform,

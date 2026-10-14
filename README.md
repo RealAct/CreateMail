@@ -1,118 +1,101 @@
-# 💌 Mailspring
+# 💌 CreateMail
 
-**Mailspring is a new version of Nylas Mail maintained by one of the original authors. It's faster, leaner, and shipping today!** It replaces the JavaScript sync code in Nylas Mail with a new C++ sync engine based on [Mailcore2](https://github.com/MailCore/mailcore2). It uses roughly half the RAM and CPU of Nylas Mail and idles with almost zero "CPU Wakes", which translates to great battery life. It also has an entirely revamped composer and other great new features.
+CreateMail is a fork of [Mailspring](https://github.com/Foundry376/Mailspring)
+that looks and works like Mailspring, with every **Mailspring Pro** feature
+included and unlocked. No Mailspring ID, subscription or quota is needed.
 
-Mailspring's UI is open source (GPLv3) and written in TypeScript with [Electron](https://github.com/atom/electron) and [React](https://facebook.github.io/react/) - it's built on a plugin architecture and was designed to be easy to extend. Check out [CONTRIBUTING.md](https://github.com/Foundry376/Mailspring/blob/master/CONTRIBUTING.md) to get started!
+It keeps Mailspring's interface, themes, icons and C++ sync engine
+([Mailspring-Sync](https://github.com/Foundry376/Mailspring-Sync)) as they are,
+and changes only what is needed to take Pro access off Mailspring's billing
+servers and to run the Pro features without them.
 
-Mailspring's sync engine is spawned by the Electron application and runs locally on your computer. [It is open source (GPLv3) and written in C++ and C.](https://github.com/Foundry376/Mailspring-Sync) For convenience, however, when you set up your development environment, Mailspring uses the latest version of the sync engine we've shipped for your platform so you don't need to pull sources or install its compile-time dependencies.
+CreateMail is not affiliated with or endorsed by Foundry 376 / Mailspring.
+Mailspring is open source under the GPLv3, and so is this fork: see
+[LICENSE.md](LICENSE.md). If you find Mailspring useful, consider supporting
+its authors at [getmailspring.com/pro](https://getmailspring.com/pro).
 
-![Mailspring Screenshot](https://github.com/Foundry376/Mailspring/raw/master/screenshots/hero_graphic_mac%402x.png)
+## How it differs from Mailspring
 
-## Features
+- **Pro features are always on.** `IdentityStore.hasProFeatures()` is always
+  true and `FeatureUsageStore` has no quotas, so snooze, send later,
+  reminders, templates and the rest never show an upgrade prompt.
+- **No Mailspring ID.** Onboarding goes straight from the tour to adding an
+  email account, and the Preferences "Subscription" tab is replaced by a
+  "Pro Features" overview.
+- **Its own app identity.** The app is `CreateMail.app` with bundle ID
+  `io.github.realact.createmail` and stores its data in
+  `~/Library/Application Support/CreateMail`, so it can sit next to an
+  installed `Mailspring.app` without sharing or touching its data.
+- **No calls home.** Auto-update (which would replace this app with official
+  Mailspring), Sentry error reporting and crash-report uploads are turned off.
 
-Mailspring comes packed with powerful features like Unified Inbox, Snooze, Send
-Later, Mail Rules, Templates and more. Mailspring Pro, which you can unlock
-with a monthly subscription, adds even more features for people who send a ton
-of email: link tracking, read receipts, mailbox analytics, contact and company
-profiles. **All of these features run in the client - Mailspring does not send
-your email credentials to the cloud.** For a full list of features, check out
-[getmailspring.com](https://getmailspring.com/).
+## Pro feature status
 
-## Download Mailspring
+| Pro feature | Status |
+| --- | --- |
+| Snooze messages | ✅ Unlocked, runs locally |
+| Send Later | ✅ Unlocked, runs locally (CreateMail must be running at send time) |
+| Follow-up reminders | ✅ Unlocked, runs locally |
+| Mail templates | ✅ Unlocked |
+| Mailbox insights (Activity) | ✅ Unlocked, runs locally |
+| Unlimited accounts, signatures, mail rules, themes | ✅ No limits |
+| Rich contact and company profiles | 🚧 Phase 2: local profiles built from your mail |
+| Automatic translation | 🚧 Phase 2: pluggable translation provider |
+| Grammar check | 🚧 Phase 2: pluggable grammar provider |
+| Thread sharing | 🚧 Phase 2: share as a self-contained HTML file |
+| Read receipts | 🚧 Phase 3: self-hostable tracking server |
+| Link tracking | 🚧 Phase 3: self-hostable tracking server |
 
-You can download compiled versions of Mailspring for Windows, Mac OS X, and
-Linux (deb, rpm and snap) from
-[https://getmailspring.com/download](https://getmailspring.com/download).
+Features marked 🚧 depend on Mailspring's hosted services, so they are hidden
+until CreateMail ships its own replacement for that service.
 
-## Getting Help
+## Roadmap
 
-You can find community-based help and discussion with other Mailspring users on our
-[Discourse community](https://community.getmailspring.com/).
+1. **Phase 1: Unlock** (this release). Fork upstream Mailspring, remove the
+   Pro gating, give the app its own identity, and build it for macOS.
+2. **Phase 2: Local replacements** for hosted Pro features that do not need a
+   public server: contact profiles from local mail history, translation and
+   grammar checking through a configurable provider, thread sharing as an
+   exported page.
+3. **Phase 3: CreateMail server**, a small self-hostable service for the
+   features that need a public URL: read-receipt pixels, link-click
+   redirects, and optional cross-device sync of plugin metadata.
 
-## Contributing
+## Installing on a Mac
 
-Mailspring is entirely open-source. Pull requests and contributions are
-welcome! There are three ways to contribute: building a plugin, building a
-theme, and submitting pull requests to the project itself. When you're getting
-started, you may want to join our
-[Discourse](https://community.getmailspring.com/) so you can ask questions and
-learn from other people doing development.
+### Download a build
 
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
+1. Open this repository's **Actions** tab, pick **Build for macOS**, and
+   click **Run workflow** (or download a zip from **Releases**).
+2. Download `CreateMail-AppleSilicon` (M1 and later) or `CreateMail-Intel`.
+3. Unzip it and drag `CreateMail.app` into `/Applications`.
+4. The build is not notarized by Apple, so the first launch needs one of:
+   - right-click `CreateMail.app` → **Open** → **Open**, or
+   - `xattr -cr /Applications/CreateMail.app` in Terminal.
 
-### Running Mailspring from Source
+### Build it yourself
 
-To install all dependencies and run Mailspring from its source code,
-run the following commands from the root directory of the Mailspring repository:
+Requires Node.js 20+ and the Xcode command line tools.
 
 ```
-export npm_config_arch=x64 # If you are on an M1 / Apple Silicon Mac
 npm install
-npm start
+npm run build
 ```
 
-You can attach command line parameters by separating them using a double hyphen:
+The app is written to `app/dist/CreateMail-darwin-<arch>/CreateMail.app` and
+zipped to `app/dist/CreateMail.zip`.
 
-```
-npm start -- --help
-```
+To run from source instead: `npm install && npm start`.
 
-### Building Mailspring
+## Development
 
-To build Mailspring, you need to run the following command from the root directory
-of the Mailspring repository:
+Everything in upstream Mailspring's docs still applies: see
+[CONTRIBUTING.md](CONTRIBUTING.md), [CLAUDE.md](CLAUDE.md) and
+[PLUGIN_SYSTEM_ARCHITECTURE.md](PLUGIN_SYSTEM_ARCHITECTURE.md).
 
-```
-npm run-script build
-```
+The sync engine is the `mailsync` submodule, pinned to upstream
+Mailspring-Sync. `npm install` downloads the prebuilt binary for that commit,
+so you do not need to compile it.
 
-### Building A Plugin
-
-Plugins lie at the heart of Mailspring and give it its powerful features.
-Building your own plugins allows you to integrate the app with other tools,
-experiment with new workflows, and more. Follow the [Getting Started
-guide](https://Foundry376.github.io/Mailspring/) to write your first plugin in
-five minutes.
-
-- To create your own theme, check out the
-  [Mailspring-Theme-Starter](https://github.com/Foundry376/Mailspring-Theme-Starter).
-
-- To create your own plugin, check out the
-  [Mailspring-Plugin-Starter](https://github.com/Foundry376/Mailspring-Plugin-Starter).
-
-A plugin "store" like the Chrome Web Store is coming soon, and will make it
-easy for other users to discover plugins you create. (Right now, users need to
-"sideload" the plugins into the app by downloading them and copying them into
-place.)
-
-You can share and browse Mailspring Plugins, and discuss plugin development
-with other developers, on our
-[Discourse](https://community.getmailspring.com/).
-
-### Building a Theme
-
-The Mailspring user interface is styled using CSS, which means it's easy to
-modify and extend. Mailspring comes stock with a few beautiful themes, and
-there are many more which have been built by community developers. To start
-creating a theme, [clone the theme starter](https://github.com/Foundry376/Mailspring-Theme-Starter)!
-
-If you are updating an existing Nylas theme for Mailspring here is a
-[step by step tutorial](https://community.getmailspring.com/t/updating-an-n1-nylas-mail-theme-for-mailspring/195).
-Notice: as part of the update process you will probably need to [import mailspring base variables](https://github.com/Foundry376/Mailspring/issues/326#issuecomment-343757775).
-
-You can share and browse Mailspring Themes, and discuss theme development with other developers, on our [Discourse](https://community.getmailspring.com/).
-
-### Localizing / Translating
-
-Mailspring (1.5.0 and above) supports localization. If you're a fluent speaker of
-another language, we'd love your help improving translations. Check out the
-[LOCALIZATION](https://github.com/Foundry376/Mailspring/blob/master/LOCALIZATION.md)
-guide for more information. You can discuss localization and translation with
-other developers on our [Discourse](https://community.getmailspring.com/).
-
-### Contributing to Mailspring Core
-
-Pull requests are always welcome - check out
-[CONTRIBUTING](https://github.com/Foundry376/Mailspring/blob/master/CONTRIBUTING.md)
-for more information about setting up the development environment, running
-tests locally, and submitting pull requests.
+The repository's first commit is the unmodified upstream import, so
+`git diff <first commit>` shows every change CreateMail makes to Mailspring.

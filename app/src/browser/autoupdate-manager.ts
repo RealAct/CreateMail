@@ -16,6 +16,7 @@ const NoUpdateAvailableState = 'no-update-available';
 const UnsupportedState = 'unsupported';
 const ErrorState = 'error';
 const preferredChannel = 'stable';
+const AUTO_UPDATE_ENABLED = false;
 
 export default class AutoUpdateManager extends EventEmitter {
   state = IdleState;
@@ -71,6 +72,14 @@ export default class AutoUpdateManager extends EventEmitter {
   };
 
   setupAutoUpdater() {
+    // CreateMail: Mailspring's update feed serves official Mailspring builds,
+    // which would replace this app with upstream Mailspring. Updates for the
+    // clone are installed manually from this repository's releases instead.
+    if (!AUTO_UPDATE_ENABLED) {
+      this.setState(UnsupportedState);
+      return;
+    }
+
     if (process.platform === 'win32') {
       const Impl = require('./autoupdate-impl-win32').default;
       autoUpdater = new Impl();
@@ -163,6 +172,10 @@ export default class AutoUpdateManager extends EventEmitter {
   }
 
   check({ hidePopups }: { hidePopups?: boolean } = {}) {
+    if (!autoUpdater) {
+      if (!hidePopups) this.onUpdateNotAvailable();
+      return;
+    }
     this.updateFeedURL();
     if (!hidePopups) {
       autoUpdater.once('update-not-available', this.onUpdateNotAvailable);
@@ -172,6 +185,7 @@ export default class AutoUpdateManager extends EventEmitter {
   }
 
   install() {
+    if (!autoUpdater) return;
     autoUpdater.quitAndInstall();
   }
 
@@ -187,7 +201,7 @@ export default class AutoUpdateManager extends EventEmitter {
   }
 
   onUpdateNotAvailable = () => {
-    autoUpdater.removeListener('error', this.onUpdateError);
+    if (autoUpdater) autoUpdater.removeListener('error', this.onUpdateError);
     dialog.showMessageBox({
       type: 'info',
       buttons: [localized('OK')],

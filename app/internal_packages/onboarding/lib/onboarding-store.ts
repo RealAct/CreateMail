@@ -59,10 +59,9 @@ class OnboardingStore extends MailspringStore {
       // switching environments.
       this._pageStack = ['account-choose'];
     } else if (hasAccounts) {
-      // Should only happen when the user has "signed out" of their Mailspring ID,
-      // but already has accounts synced. Or is upgrading from a very old build.
-      // We used to show "Welcome Back", but now just jump to sign in.
-      this._pageStack = ['authenticate'];
+      // Upstream sent signed-out users back to the Mailspring ID sign-in page.
+      // CreateMail does not require a Mailspring ID, so go to account setup.
+      this._pageStack = ['account-choose'];
     } else {
       // Standard new user onboarding flow.
       this._pageStack = ['welcome'];
